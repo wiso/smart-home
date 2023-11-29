@@ -1,0 +1,24 @@
+version: '3.7'
+
+services:
+  portainer-ce:
+      container_name: portainer
+      image: portainer/portainer-ce
+      restart: unless-stopped
+      ports:
+        - 8000:8000 # Agent
+        - 9000:9000 # Web UI
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
+        - ./data/portainer-ce:/data
+
+  home-assistant:
+    container_name: home-assistant
+    image: "ghcr.io/home-assistant/home-assistant:stable"
+    volumes:
+      - ./config/homeassistant:/config
+      - /run/dbus:/run/dbus:ro
+      - /etc/localtime:/etc/localtime:ro
+    network_mode: host
+    restart: unless-stopped
+    privileged: true
