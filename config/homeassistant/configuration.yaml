@@ -11,3 +11,28 @@ script: !include scripts.yaml
 scene: !include scenes.yaml
 
 sensor: !include sensor.yaml
+
+binary_sensor:
+  - platform: template
+    sensors:
+      washing_machine_status:
+        friendly_name: "Stato operativo lavatrice"
+        value_template: "{{ states('sensor.sensor.shellyplusplugs_b0b21c19c49c_switch_0_power')| int(default=0) > 5 }}"
+        device_class: power
+        delay_on:
+          seconds: 15
+        delay_off:
+          seconds: 15
+
+influxdb:
+  host: 192.168.1.141
+  port: 8086
+  token: !secret influxdb_token
+  organization: hass
+  bucket: hass
+  api_version: 2
+  ssl: false
+  max_retries: 3 
+  include:
+    entities:
+      - sensor.view_plus_carbon_dioxide
