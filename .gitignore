@@ -1,2 +1,5 @@
 data
 passwords
+**/secrets.yaml
+**/secret.yaml
+config/homeassistant/custom_components
