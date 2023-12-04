@@ -85,3 +85,23 @@ services:
       - ./config/plex:/config
       - ./config/plex/transcode:/transcode
       - $HOME/media/:/media
+
+  grafana:
+    container_name: grafana
+    image: grafana/grafana
+    restart: unless-stopped
+    user: '0'
+    volumes:
+      - ./config/grafana:/var/lib/grafana
+    ports:
+      - 3000:3000
+
+  influxdb:
+    container_name: influxdb
+    image: influxdb:latest
+    restart: unless-stopped
+    volumes:
+      - ./config/influxdb/config.yml:/etc/influxdb2/config.yml
+      - ./data/influxdb/data:/var/lib/influxdb2
+    ports:
+      - "8086:8086"
