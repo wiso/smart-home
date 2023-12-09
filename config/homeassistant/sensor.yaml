@@ -23,3 +23,18 @@
     nightstate:
       friendly_name: Night State
       value_template: "{% if is_state('sun.sun', 'below_horizon') %}1{% else %}0{% endif %}"
+
+- platform: viaggiatreno
+  train_id: 2454
+  station_id: S05043
+  train_name: treno Lambrate 7.29
+
+- platform: viaggiatreno
+  train_id: 2156
+  station_id: S02336
+  train_name: treno Lambrate 7.34
+
+- platform: viaggiatreno
+  train_id: 10856
+  station_id: S05000
+  train_name: treno Lambrate 7.40
