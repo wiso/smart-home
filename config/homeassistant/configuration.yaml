@@ -17,12 +17,17 @@ binary_sensor:
     sensors:
       washing_machine_status:
         friendly_name: "Stato operativo lavatrice"
-        value_template: "{{ states('sensor.sensor.shellyplusplugs_b0b21c19c49c_switch_0_power')| int(default=0) > 5 }}"
+        value_template: "{{ states('sensor.sensor.0xa4c138b68d2ecff7_power')| int(default=0) > 5 }}"
         device_class: power
         delay_on:
           seconds: 15
         delay_off:
           seconds: 15
+  - platform: ping
+    host: 8.8.8.8
+    count: 2
+    scan_interval: 60
+    name: internet_connection
 
 influxdb:
   host: 192.168.1.141

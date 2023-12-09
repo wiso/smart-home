@@ -1,0 +1,44 @@
+- id: '1701895642399'
+  alias: Low battery level detection & notification for all battery sensors
+  description: ''
+  use_blueprint:
+    path: sbyx/low-battery-level-detection-notification-for-all-battery-sensors.yaml
+    input:
+      time: '22:09:00'
+      day: 3
+      actions:
+      - service: notify.persistent_notification
+        data:
+          message: The battery of the sensor(s) {{sensors}} is low.
+      threshold: 15
+- id: '1701897453015'
+  alias: Lavatrice finito
+  description: ''
+  use_blueprint:
+    path: sbyx/notify-or-do-something-when-an-appliance-like-a-dishwasher-or-washing-machine-finishes.yaml
+    input:
+      power_sensor: sensor.shellyplusplugs_b0b21c19c49c_switch_0_power
+      actions:
+      - service: notify.persistent_notification
+        data:
+          message: Lavatrice finito
+      pre_actions:
+      - service: notify.persistent_notification
+        data:
+          message: Lavatrice iniziato
+- id: '1702160827300'
+  alias: internet connection
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.internet_connection
+    to: 'off'
+    for:
+      minutes: 2
+  condition: []
+  action:
+  - service: notify.persistent_notification
+    data:
+      message: Connection is down
+  mode: single
