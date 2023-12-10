@@ -76,7 +76,7 @@ services:
     restart: unless-stopped
     environment:
       - TZ=Europe/Rome
-      - PLEX_CLAIM=!secret.yaml plex_claim
+      - PLEX_CLAIM=!secrets.yaml plex_claim
       - VERSION=docker
       - PUID=1000
       - PGID=1000
@@ -105,3 +105,12 @@ services:
       - ./data/influxdb/data:/var/lib/influxdb2
     ports:
       - "8086:8086"
+
+  duckdns:
+      container_name: duckdns
+      image: ghcr.io/linuxserver/duckdns
+      environment:
+      - "TZ=Europe/Rome"
+      - "SUBDOMAINS=giurrero.duckdns.org"
+      - "TOKEN=!secrets.yaml duckdns"
+      restart: always
