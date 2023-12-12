@@ -1,0 +1,403 @@
+title: Home2
+views:
+  - path: default_view
+    title: Home
+    cards:
+      - type: entities
+        entities:
+          - entity: sensor.0xa4c138b68d2ecff7_power
+          - entity: binary_sensor.washing_machine_status
+          - entity: switch.0xa4c138b68d2ecff7
+        title: Bagno Vasca
+      - type: entities
+        entities:
+          - person.ruggero
+      - show_current: true
+        show_forecast: true
+        type: weather-forecast
+        entity: weather.forecast_home
+        forecast_type: hourly
+      - type: vertical-stack
+        cards:
+          - show_name: true
+            show_icon: true
+            type: button
+            tap_action:
+              action: toggle
+            entity: switch.shellyplusplugs_b0b21c19c49c_switch_0
+            name: Interruttore Renna
+            icon_height: 100px
+          - type: history-graph
+            entities:
+              - entity: switch.shellyplusplugs_b0b21c19c49c_switch_0
+            logarithmic_scale: false
+            hours_to_show: 24
+          - type: entity
+            entity: sensor.shellyplusplugs_b0b21c19c49c_switch_0_power
+            state_color: false
+      - type: entities
+        entities:
+          - entity: sensor.view_plus_carbon_dioxide
+            name: Carbon dioxide
+          - entity: sensor.view_plus_humidity
+            name: Humidity
+          - entity: sensor.view_plus_pm1
+            name: PM1
+          - entity: sensor.view_plus_pm2_5
+            name: PM2.5
+          - entity: sensor.view_plus_pressure
+            name: Pressure
+          - entity: sensor.view_plus_radon
+            name: Radon
+          - entity: sensor.view_plus_temperature
+            name: Temperature
+          - entity: sensor.view_plus_vocs
+            name: VOCs
+        title: View Plus
+      - type: entities
+        entities:
+          - entity: sensor.tempbagnodoccia_pressure
+            name: Atmospheric pressure
+          - entity: sensor.tempbagnodoccia_humidity
+            name: Humidity
+          - entity: sensor.tempbagnodoccia_temperature
+            name: Temperature
+        title: TempBagnoDoccia
+      - type: custom:scheduler-card
+        include:
+          - switch.shellyplusplugs_b0b21c19c49c_switch_0
+        exclude: []
+        title: Programmazione renna
+        time_step: 1
+      - type: entities
+        entities:
+          - entity: sensor.tempstudio_humidity
+            name: Humidity
+          - entity: sensor.tempstudio_temperature
+            name: Temperature
+        title: TempStudio
+      - type: entities
+        entities:
+          - entity: sensor.mio_timer_1_humidity
+            name: Humidity
+          - entity: binary_sensor.mio_timer_1_is_it_watering_right_now
+            name: Is it watering right now ?
+          - entity: sensor.mio_timer_1_last_watering_end_time
+            name: Last watering end time
+          - entity: sensor.mio_timer_1_last_watering_source
+            name: Last watering source
+          - entity: sensor.mio_timer_1_last_watering_start_time
+            name: Last watering start time
+          - entity: sensor.mio_timer_1_last_watering_status
+            name: Last watering status
+          - entity: sensor.mio_timer_1_next_watering_end_time
+            name: Next watering end time
+          - entity: sensor.mio_timer_1_next_watering_event_source
+            name: Next watering event source
+          - entity: sensor.mio_timer_1_next_watering_start_time
+            name: Next watering start time
+          - entity: sensor.mio_timer_1_next_watering_status
+            name: Next watering status
+        title: mio timer-1
+      - type: markdown
+        content: |2-
+           * [ZigbeeToMqtt](http://192.168.1.141:8080)
+           * [OwnTrack](http://192.168.1.141:8083)
+           * [Grafana](http://192.168.1.141:3000)
+           * [Plex](http://192.168.1.141:32400)
+           * [InfluxDB](http://192.168.1.141:8086)
+           * [PiHole](http://192.168.1.141:5300/admin/)
+      - type: entities
+        entities:
+          - entity: sensor.treno_lambrate_7_29
+          - entity: sensor.treno_lambrate_7_34
+          - entity: sensor.treno_lambrate_7_40
+        title: Treni mattino
+        state_color: true
+        show_header_toggle: true
+      - type: entities
+        entities:
+          - switch.0xa4c138b68d2ecff7
+          - entity: lock.0xa4c138b68d2ecff7_child_lock
+            name: Child lock
+          - entity: select.0xa4c138b68d2ecff7_indicator_mode
+            name: Indicator mode
+        title: '0xa4c138b68d2ecff7'
+  - title: Temperatures
+    path: temperatures
+    type: sidebar
+    badges: []
+    cards:
+      - type: horizontal-stack
+        cards:
+          - graph: line
+            type: sensor
+            entity: sensor.view_plus_temperature
+            detail: 1
+            name: Soggiorno
+          - graph: line
+            type: sensor
+            detail: 1
+            name: Bagno doccia
+            entity: sensor.tempbagnodoccia_temperature
+          - graph: line
+            type: sensor
+            detail: 1
+            name: Studio
+            entity: sensor.tempstudio_temperature
+          - graph: line
+            type: sensor
+            entity: sensor.tempromeo_temperature
+            detail: 1
+            name: Romeo
+      - type: horizontal-stack
+        cards:
+          - graph: line
+            type: sensor
+            entity: sensor.view_plus_humidity
+            detail: 1
+            name: Soggiorno
+          - graph: line
+            type: sensor
+            detail: 1
+            name: Bagno doccia
+            entity: sensor.tempbagnodoccia_humidity
+          - graph: line
+            type: sensor
+            detail: 1
+            name: Studio
+            entity: sensor.tempstudio_humidity
+          - graph: line
+            type: sensor
+            entity: sensor.tempromeo_humidity
+            detail: 1
+            name: Romeo
+      - chart_type: line
+        period: hour
+        type: statistics-graph
+        entities:
+          - sensor.view_plus_carbon_dioxide
+        stat_types:
+          - mean
+          - min
+          - max
+        days_to_show: 10
+        hide_legend: true
+        title: Co2 Soggiorno
+      - chart_type: line
+        period: hour
+        type: statistics-graph
+        entities:
+          - sensor.view_plus_pm1
+          - sensor.view_plus_pm2_5
+        stat_types:
+          - mean
+          - min
+          - max
+        days_to_show: 10
+        title: PM1 / PM2.5
+        hide_legend: true
+      - chart_type: line
+        period: hour
+        type: statistics-graph
+        entities:
+          - sensor.view_plus_radon
+        stat_types:
+          - mean
+          - min
+          - max
+        days_to_show: 100
+        title: Radon
+        hide_legend: true
+      - chart_type: line
+        period: hour
+        type: statistics-graph
+        entities:
+          - sensor.view_plus_vocs
+        stat_types:
+          - mean
+          - min
+          - max
+        days_to_show: 100
+        title: VOCS
+        hide_legend: true
+      - type: custom:mini-graph-card
+        font_size: 80
+        hour24: true
+        points_per_hour: 2
+        show:
+          extrema: true
+        animate: true
+        hours_to_show: 120
+        entities:
+          - sensor.view_plus_carbon_dioxide
+          - color: gray
+            entity: sensor.nightstate
+            name: Night
+            show_legend: false
+            show_line: false
+            show_points: false
+            y_axis: secondary
+        color_thresholds:
+          - value: 600
+            color: '#24853f'
+          - value: 800
+            color: '#f6b914'
+          - value: 1000
+            color: '#c0392b'
+      - type: custom:mini-graph-card
+        font_size: 80
+        hour24: true
+        points_per_hour: 2
+        show:
+          extrema: true
+        animate: true
+        hours_to_show: 120
+        entities:
+          - sensor.view_plus_vocs
+          - color: gray
+            entity: sensor.nightstate
+            name: Night
+            show_legend: false
+            show_line: false
+            show_points: false
+            y_axis: secondary
+        color_thresholds:
+          - value: 600
+            color: '#24853f'
+          - value: 800
+            color: '#f6b914'
+          - value: 1000
+            color: '#c0392b'
+      - chart_type: line
+        period: hour
+        type: statistics-graph
+        entities:
+          - sensor.view_plus_temperature
+          - sensor.tempstudio_temperature
+          - sensor.tempbagnodoccia_temperature
+          - sensor.tempromeo_temperature
+        stat_types:
+          - mean
+          - min
+          - max
+        days_to_show: 10
+        hide_legend: true
+      - type: entities
+        entities:
+          - entity: sensor.comfort_soggiorno_absolute_humidity
+            name: Soggiorno
+            secondary_info: last-updated
+          - entity: sensor.thermal_comfort_absolute_humidity
+            name: Studio
+            secondary_info: last-updated
+          - entity: sensor.comfort_bagno_doccia_absolute_humidity
+            name: Bagno Doccia
+            secondary_info: last-updated
+          - entity: sensor.comfort_romeo_absolute_humidity
+            secondary_info: last-updated
+            name: Romeo
+        title: Umidità Assoluta
+        show_header_toggle: true
+        state_color: false
+  - title: System
+    path: system
+    badges: []
+    cards:
+      - graph: line
+        type: sensor
+        detail: 1
+        entity: sensor.processor_use
+      - graph: line
+        type: sensor
+        entity: sensor.load_15m
+        detail: 1
+      - graph: line
+        type: sensor
+        entity: sensor.processor_temperature
+        detail: 1
+      - type: entities
+        entities:
+          - sensor.disk_free
+          - sensor.disk_use_percent_config
+          - sensor.disk_use
+          - sensor.last_boot
+          - sensor.load_15m
+          - sensor.load_1m
+          - sensor.load_5m
+          - sensor.memory_free
+          - sensor.memory_use
+          - sensor.memory_use_percent
+          - sensor.processor_temperature
+          - sensor.processor_use
+          - sensor.swap_free
+          - sensor.swap_use
+          - sensor.swap_use_percent
+      - square: true
+        type: grid
+        cards:
+          - type: gauge
+            entity: sensor.mio_timer_battery_percent
+            name: Netro
+          - type: gauge
+            entity: sensor.view_plus_battery
+          - type: gauge
+            entity: sensor.tempstudio_battery
+          - type: gauge
+            entity: sensor.tempbagnodoccia_battery
+            needle: false
+          - type: gauge
+            entity: sensor.tempromeo_battery
+        columns: 2
+      - type: entities
+        entities:
+          - update.shellyplusplugs_b0b21c19c49c_firmware_update
+        title: Update
+      - type: entities
+        entities:
+          - button.shellyplusplugs_b0b21c19c49c_reboot
+        title: Button
+      - type: entities
+        entities:
+          - binary_sensor.shellyplusplugs_b0b21c19c49c_switch_0_overheating
+          - binary_sensor.shellyplusplugs_b0b21c19c49c_switch_0_overpowering
+          - binary_sensor.shellyplusplugs_b0b21c19c49c_switch_0_overvoltage
+        title: Binary sensor
+      - type: entities
+        entities:
+          - entity: sensor.pi_hole_ads_blocked_today_2
+            name: Ads blocked today
+          - entity: sensor.pi_hole_ads_percentage_blocked_today_2
+            name: Ads percentage blocked today
+          - entity: sensor.pi_hole_dns_queries_cached_2
+            name: DNS queries cached
+          - entity: sensor.pi_hole_dns_queries_forwarded_2
+            name: DNS queries forwarded
+          - entity: sensor.pi_hole_dns_queries_today_2
+            name: DNS queries today
+          - entity: sensor.pi_hole_dns_unique_clients_2
+            name: DNS unique clients
+          - entity: sensor.pi_hole_dns_unique_domains_2
+            name: DNS unique domains
+          - entity: sensor.pi_hole_domains_blocked_2
+            name: Domains blocked
+          - entity: sensor.pi_hole_seen_clients_2
+            name: Seen clients
+          - entity: binary_sensor.pi_hole_status_2
+            name: Status
+        title: Pi-Hole
+      - type: entities
+        entities:
+          - entity: update.pi_hole_core_update_available_2
+            name: Core update available
+          - entity: update.pi_hole_ftl_update_available_2
+            name: FTL update available
+          - entity: update.pi_hole_web_update_available_2
+            name: Web update available
+        title: Pi-Hole
+      - type: history-graph
+        entities:
+          - entity: binary_sensor.internet_connection
+        title: internet connection
+        logarithmic_scale: false
+        hours_to_show: 96
