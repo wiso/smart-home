@@ -110,7 +110,21 @@ services:
       container_name: duckdns
       image: ghcr.io/linuxserver/duckdns
       environment:
-      - "TZ=Europe/Rome"
-      - "SUBDOMAINS=giurrero.duckdns.org"
-      - "TOKEN=!secrets.yaml duckdns"
+      - TZ=Europe/Rome
+      - SUBDOMAINS=giurrero
+      - TOKEN=!secrets.yaml duckdns
       restart: always
+
+  caddy:
+    container_name: caddy
+    image: caddy:latest
+    volumes:
+    - "./config/caddy/Caddyfile:/etc/caddy/Caddyfile"
+    - "./data/caddy:/data"
+    environment:
+    - "TZ=Europe/Rome"
+    restart: always
+    ports:
+    - "80:80"
+    - "443:443"
+    - "7000:7000"
