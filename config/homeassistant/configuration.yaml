@@ -1,10 +1,14 @@
-
 # Loads default set of integrations. Do not remove.
 default_config:
 
 # Load frontend themes from the themes folder
 frontend:
   themes: !include_dir_merge_named themes
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.0.0.0/8
 
 automation: !include automations.yaml
 script: !include scripts.yaml
@@ -37,7 +41,7 @@ influxdb:
   bucket: hass
   api_version: 2
   ssl: false
-  max_retries: 3 
+  max_retries: 3
   include:
     entities:
       - sensor.view_plus_carbon_dioxide
