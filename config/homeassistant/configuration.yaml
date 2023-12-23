@@ -10,6 +10,9 @@ http:
   trusted_proxies:
     - 172.0.0.0/8
 
+#lovelace:
+#  mode: yaml
+
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
@@ -45,3 +48,11 @@ influxdb:
   include:
     entities:
       - sensor.view_plus_carbon_dioxide
+
+mqtt_statestream:
+  base_topic: homeassistant
+  publish_attributes: true
+  publish_timestamps: true
+  include:
+    entity_globs:
+      - sensor.view_plus*
