@@ -56,3 +56,6 @@ mqtt_statestream:
   include:
     entity_globs:
       - sensor.view_plus*
+
+homeassistant:
+  packages: !include_dir_named packages
