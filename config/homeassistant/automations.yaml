@@ -7,9 +7,13 @@
       time: '22:09:00'
       day: 3
       actions:
-      - service: notify.persistent_notification
-        data:
+      - data:
           message: The battery of the sensor(s) {{sensors}} is low.
+        action: notify.persistent_notification
+      - action: notify.persistent_notification
+        metadata: {}
+        data:
+          message: Batterie scariche
       threshold: 15
 - id: '1701897453015'
   alias: Lavatrice finito
@@ -17,15 +21,33 @@
   use_blueprint:
     path: sbyx/notify-or-do-something-when-an-appliance-like-a-dishwasher-or-washing-machine-finishes.yaml
     input:
-      power_sensor: sensor.shellyplusplugs_b0b21c19c49c_switch_0_power
+      power_sensor: sensor.presalavatrice_power
       actions:
-      - service: notify.persistent_notification
+      - variables:
+          stop_energy: '{{ states(''sensor.presalavatrice_energy'') |float }}'
+      - data:
+          message: Lavatrice finito, energy = {{ stop_energy - start_energy }} kWh
+        action: notify.persistent_notification
+      - action: counter.increment
+        target:
+          entity_id: counter.lavatrice_cicli
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lavatrice_ultimo_consumo
         data:
-          message: Lavatrice finito
+          value: '{{ (stop_energy - start_energy) | round(3) }}'
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lavatrice_ultima_durata
+        data:
+          value: '{{ ((now().timestamp() - (start_ts | float)) / 60) | round(0) }}'
       pre_actions:
-      - service: notify.persistent_notification
-        data:
+      - variables:
+          start_energy: '{{ states(''sensor.presalavatrice_energy'') |float }}'
+          start_ts: '{{ now().timestamp() }}'
+      - data:
           message: Lavatrice iniziato
+        action: notify.persistent_notification
 - id: '1702160827300'
   alias: internet connection
   description: ''
@@ -41,4 +63,939 @@
   - service: notify.persistent_notification
     data:
       message: Connection is down
+  mode: single
+- id: '1703289493740'
+  alias: Publish PM1
+  description: Publish PM1
+  trigger:
+  - type: pm1
+    platform: device
+    device_id: 1222ded6cade07c2e6064c0fbe247d77
+    entity_id: 6ebc6d6e70649914d1178fee777dc5e6
+    domain: sensor
+    above: 1
+    below: 1
+  - platform: state
+    entity_id:
+    - sensor.view_plus_pm1
+  condition: []
+  action:
+  - service: mqtt.publish
+    data:
+      topic: viewplus/pm1
+      payload: '''{{ states.sensor.view_plus_pm1 }}'''
+  mode: single
+- id: '1704239375324'
+  alias: Lavastoviglie finito
+  description: ''
+  use_blueprint:
+    path: sbyx/notify-or-do-something-when-an-appliance-like-a-dishwasher-or-washing-machine-finishes.yaml
+    input:
+      power_sensor: sensor.presalavastoviglie_power
+      actions:
+      - variables:
+          stop_energy: '{{ states(''sensor.presalavastoviglie_energy'') |float }}'
+      - data:
+          message: Lavastoviglie finito, energy = {{ stop_energy - start_energy }}
+            kWh
+        action: notify.persistent_notification
+      - action: counter.increment
+        target:
+          entity_id: counter.lavastoviglie_cicli
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lavastoviglie_ultimo_consumo
+        data:
+          value: '{{ (stop_energy - start_energy) | round(3) }}'
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.lavastoviglie_ultima_durata
+        data:
+          value: '{{ ((now().timestamp() - (start_ts | float)) / 60) | round(0) }}'
+      pre_actions:
+      - variables:
+          start_energy: '{{ states(''sensor.presalavastoviglie_energy'') |float }}'
+          start_ts: '{{ now().timestamp() }}'
+      - data:
+          message: Lavastoviglie iniziato
+        action: notify.persistent_notification
+- id: '1723245762814'
+  alias: Irrigazione write last on
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.irrigatore
+    from: 'off'
+    to: 'on'
+  condition: []
+  action:
+  - action: input_datetime.set_datetime
+    data:
+      entity_id: input_datetime.irrigatore_last_on
+      datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+  mode: single
+- id: '1723247287370'
+  alias: Irrigazione write last off
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - switch.irrigatore
+    from: 'on'
+    to: 'off'
+  condition: []
+  action:
+  - action: input_datetime.set_datetime
+    data:
+      entity_id: input_datetime.irrigatore_last_off
+      datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+  mode: single
+- id: '1723846949768'
+  alias: Irrigatore soggiorno dimenticato acceso
+  description: Spegne l'irrigatore dopo 15 minuti di inattività e invia una notifica.
+  triggers:
+  - entity_id:
+    - switch.irrigatore
+    to: 'on'
+    for:
+      hours: 0
+      minutes: 15
+      seconds: 0
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.irrigatore
+  - data:
+      message: Non hai spento irrigatore dopo 15 minuti soggiorno!
+    action: persistent_notification.create
+  - action: notify.mobile_app_oneplusnord2
+    metadata: {}
+    data:
+      message: NON HAI SPENTO L'ACQUA BALCONE SOGGIORNO
+  mode: single
+- id: '1727904528920'
+  alias: 'Set ringtone Ruggero '
+  description: ''
+  trigger:
+  - platform: state
+    entity_id:
+    - person.ruggero
+    from:
+    to: home
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+  condition: []
+  action:
+  - action: notify.mobile_app_oneplusnord2
+    data:
+      message: command_ringer_mode
+      data:
+        command: normal
+  mode: single
+- id: '1730197265444'
+  alias: Allerta termosifone bagno
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.smart_switch_2401107283043151370148e1e9ea9b04_power
+    for:
+      hours: 0
+      minutes: 21
+      seconds: 0
+    above: 1
+  conditions: []
+  actions:
+  - action: notify.persistent_notification
+    metadata: {}
+    data:
+      message: Termosifone acceso per più di 20 minuti
+  - action: notify.mobile_app_oneplusnord2
+    metadata: {}
+    data:
+      message: Termosifone bagno acceso da tanto tempo
+  mode: single
+- id: '1730835912684'
+  alias: Romeo Cacca Bottone
+  description: ''
+  triggers:
+  - domain: mqtt
+    device_id: 17227af20fbb63a7202d0ef8a732cbf3
+    type: action
+    subtype: double
+    trigger: device
+  conditions: []
+  actions:
+  - action: google.create_event
+    metadata: {}
+    data:
+      summary: Popo
+      start_date: '{{ now().strftime(''%Y-%m-%d'') }}'
+      end_date: '{{ (now() + timedelta(days=1)).strftime(''%Y-%m-%d'') }}'
+    target:
+      entity_id: calendar.romeo_pp
+  - action: input_datetime.set_datetime
+    metadata: {}
+    data:
+      date: '{{ now().date()  }}'
+    target:
+      entity_id: input_datetime.ultimoppromeo
+  mode: single
+- id: '1731417290067'
+  alias: AccendiSgabuzzino
+  description: ''
+  triggers:
+  - type: opened
+    device_id: 8c572a29e0d36da9ab675fcbee25db7a
+    entity_id: 73943b00e7e801217c7410d42bac8aaf
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: ef76b69779fa817d99bcb2212594605f
+    entity_id: 5ff3084a7a141c7b0889df4d7179a745
+    domain: switch
+  mode: single
+- id: '1731417353195'
+  alias: Spegni sgabuzzino
+  description: ''
+  triggers:
+  - type: not_opened
+    device_id: 8c572a29e0d36da9ab675fcbee25db7a
+    entity_id: 73943b00e7e801217c7410d42bac8aaf
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_off
+    device_id: ef76b69779fa817d99bcb2212594605f
+    entity_id: 5ff3084a7a141c7b0889df4d7179a745
+    domain: switch
+  mode: single
+- id: '1731439122592'
+  alias: RingRuggero
+  description: ''
+  triggers:
+  - domain: mqtt
+    device_id: 17227af20fbb63a7202d0ef8a732cbf3
+    type: action
+    subtype: single
+    trigger: device
+  conditions:
+  - condition: state
+    entity_id: person.ruggero
+    state: home
+  actions:
+  - action: script.ringoneplusruggero
+    metadata: {}
+    data: {}
+  mode: single
+- id: '1734882842053'
+  alias: 'Freddo bagno doccia '
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.tempbagnodoccia_temperature
+    for:
+      hours: 0
+      minutes: 1
+      seconds: 0
+    below: 18
+  conditions:
+  - type: is_open
+    condition: device
+    device_id: 583246a023f4f98d42c9a83816b19eed
+    entity_id: efaedcc798a6504ed543cbd47d4c6a31
+    domain: binary_sensor
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 5
+  actions:
+  - variables:
+      initial_temp: '{{ states(''sensor.tempbagnodoccia_temperature'') | float }}'
+  - action: notify.mobile_app_oneplusnord2
+    metadata: {}
+    data:
+      message: Freddo in bagno doccia {{initial_temp}} °C (notify.mobile_app_oneplusnord2)
+  - action: notify.notify
+    metadata: {}
+    data:
+      message: Freddo in bagno doccia {{initial_temp}} °C (notify.notify)
+  - if:
+    - condition: or
+      conditions:
+      - condition: state
+        entity_id: device_tracker.poco_x4_pro_5g
+        state: home
+      - condition: state
+        entity_id: person.ruggero
+        state: home
+    then:
+    - action: script.turn_on
+      metadata: {}
+      data: {}
+      target:
+        entity_id: script.lampeggia_luci_renna
+  - delay:
+      hours: 0
+      minutes: 15
+      seconds: 0
+  mode: single
+- id: '1744314597011'
+  alias: Turn off balcone cucina after Time has elapsed
+  description: ''
+  use_blueprint:
+    path: JonTheNiceGuy/Turn off Switch after Time has elapsed.yaml
+    input:
+      switch: switch.switch_balconecucina
+      time:
+        hours: 0
+        minutes: 3
+        seconds: 0
+- id: '1744408328253'
+  alias: TurnOnLedWhenTV
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - media_player.samsung_7_series_55
+    from: 'off'
+    to: 'on'
+  conditions:
+  - condition: sun
+    after: sunset
+  actions:
+  - action: light.turn_on
+    metadata: {}
+    data:
+      rgb_color:
+      - 255
+      - 255
+      - 255
+      brightness_pct: 28
+      transition: 1
+    target:
+      device_id: d78dc1eae5892a92909298660310eae9
+  mode: single
+- id: '1744412456989'
+  alias: TurnOffLedWhenTV
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - media_player.samsung_7_series_55
+    to: 'off'
+  actions:
+  - action: light.turn_off
+    metadata: {}
+    data:
+      transition: 5
+    target:
+      device_id: d78dc1eae5892a92909298660310eae9
+  mode: single
+- id: '1749452275740'
+  alias: Antifurto bici
+  description: ''
+  triggers:
+  - trigger: zone
+    entity_id: device_tracker.ruggero_di_bicicletta
+    zone: zone.stazione_lodi
+    event: leave
+  conditions:
+  - condition: zone
+    entity_id: person.ruggero
+    zone: zone.lavoro_ruggero
+  actions:
+  - action: notify.notify
+    metadata: {}
+    data:
+      message: Bicicletta in movimento
+  - action: notify.persistent_notification
+    metadata: {}
+    data:
+      message: bici si muove
+  mode: single
+- id: '1750283268908'
+  alias: Cambia modalità suoneria telefono
+  description: ''
+  triggers:
+  - entity_id:
+    - input_select.ring_mode_oneplusnord2
+    trigger: state
+  actions:
+  - action: notify.mobile_app_oneplusnord2
+    data:
+      message: command_ringer_mode
+      data:
+        command: "{% if is_state('input_select.ring_mode_oneplusnord2', 'Normale')
+          %}\n  normal\n{% elif is_state('input_select.ring_mode_oneplusnord2', 'Vibrazione')
+          %}\n  vibrate\n{% elif is_state('input_select.ring_mode_oneplusnord2', 'Silenzioso')
+          %}\n  silent\n{% endif %}\n"
+  - delay:
+      hours: 0
+      minutes: 0
+      seconds: 3
+      milliseconds: 0
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: normal
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Normale
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: silent
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Silenzioso
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: vibrate
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Vibrazione
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+  mode: single
+- id: '1750285338657'
+  alias: Sincronizza modalità suoneria con input_select
+  description: ''
+  triggers:
+  - entity_id:
+    - sensor.oneplusnord2_ringer_mode
+    trigger: state
+  conditions: []
+  actions:
+  - choose:
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: normal
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Normale
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: silent
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Silenzioso
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+    - conditions:
+      - condition: state
+        entity_id: sensor.oneplusnord2_ringer_mode
+        state: vibrate
+      sequence:
+      - action: input_select.select_option
+        metadata: {}
+        data:
+          option: Vibrazione
+        target:
+          entity_id: input_select.ring_mode_oneplusnord2
+  mode: single
+- id: '1750363633315'
+  alias: Update DuckDNS IP
+  description: ''
+  triggers:
+  - id: ip
+    entity_id: sensor.public_ip
+    trigger: state
+  - id: start
+    event: start
+    trigger: homeassistant
+  - trigger: time_pattern
+    hours: /1
+    id: time
+  conditions: []
+  actions:
+  - choose:
+    - alias: ip
+      conditions:
+      - condition: trigger
+        id:
+        - ip
+      - condition: template
+        value_template: '{{ trigger.to_state.state not in [''unknown'',''unavailable'',''none'']
+          }}'
+      sequence:
+      - action: rest_command.update_duckdns_ip
+        data: {}
+    - alias: start
+      conditions:
+      - condition: template
+        value_template: '{{ states(''sensor.public_ip'') not in [''unknown'',''unavailable'',''none'']
+          }}'
+      sequence:
+      - action: rest_command.update_duckdns_ip
+        data: {}
+  mode: single
+- id: '1752783171622'
+  alias: Leave Home 10 Minutes Everybody
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - zone.home
+    for:
+      hours: 0
+      minutes: 10
+      seconds: 0
+    below: 1
+  conditions: []
+  actions:
+  - action: input_boolean.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.someone_person_10min
+  mode: single
+- id: '1752789574903'
+  alias: Someone enter 10 min
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - zone.home
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+    above: 0
+  conditions: []
+  actions:
+  - action: input_boolean.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: input_boolean.someone_person_10min
+  mode: single
+- id: '1753369973497'
+  alias: Aggiorna ultimo evento Romeo PP
+  triggers:
+  - at: 06:00:00
+    trigger: time
+  actions:
+  - action: calendar.get_events
+    target:
+      entity_id: calendar.romeo_pp
+    data:
+      duration:
+        days: 10
+      start_date_time: '{{ (now() - timedelta(days=10)).isoformat() }}'
+    response_variable: romeo_pp_last_events
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ romeo_pp_last_events[''calendar.romeo_pp''][''events'']
+          | length > 0 }}'
+      sequence:
+      - data:
+          date: '{{ as_datetime(romeo_pp_last_events[''calendar.romeo_pp''][''events''][-1].start).date()
+            }}'
+        action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ultimoppromeo
+- id: '1753700561211'
+  alias: Turn Off Adaptive Cover All
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - input_boolean.toggle_adaptive_cover_all
+    to: 'off'
+  conditions: []
+  actions:
+  - type: turn_off
+    device_id: 1d05cd27b16e4ea5378791ce1b2b5b07
+    entity_id: 00daed50823a69f7e10d6c3f55ff5bdd
+    domain: switch
+  - type: turn_off
+    device_id: 621140d3ef3db57297f0d04bbc41a634
+    entity_id: 77f4d025bee223688e1d24f0dcdae467
+    domain: switch
+  - type: turn_off
+    device_id: e50d807935f1e5e474517f68f25e10a2
+    entity_id: e19b025d96b55029979c3ef6cffda455
+    domain: switch
+  mode: single
+- id: '1753700768761'
+  alias: Turn Off Adaptive Cover All
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - input_boolean.toggle_adaptive_cover_all
+    to: 'on'
+  conditions: []
+  actions:
+  - type: turn_on
+    device_id: 1d05cd27b16e4ea5378791ce1b2b5b07
+    entity_id: 00daed50823a69f7e10d6c3f55ff5bdd
+    domain: switch
+  - type: turn_on
+    device_id: 621140d3ef3db57297f0d04bbc41a634
+    entity_id: 77f4d025bee223688e1d24f0dcdae467
+    domain: switch
+  - type: turn_on
+    device_id: e50d807935f1e5e474517f68f25e10a2
+    entity_id: e19b025d96b55029979c3ef6cffda455
+    domain: switch
+  mode: single
+- id: '1756586523876'
+  alias: Spegni sgabuzzino dopo 15 minuti
+  description: ''
+  use_blueprint:
+    path: JonTheNiceGuy/Turn Off Light After Time.yaml
+    input:
+      light: light.sgabuzzino
+      time:
+        hours: 0
+        minutes: 15
+        seconds: 0
+- id: '1762642264748'
+  alias: Jukebox Automation
+  description: ''
+  use_blueprint:
+    path: music_assistant_jukebox/jukebox_controller.yaml
+    input:
+      media_player: media_player.salotto_2
+      default_playlist: none
+- id: '1762887549656'
+  alias: Accendi Balcone cucina
+  description: ''
+  triggers:
+  - type: opened
+    device_id: 1c045ecde669bf34157d0c194a539e51
+    entity_id: d1ae0331ccee0d32d5545346d63578bf
+    domain: binary_sensor
+    trigger: device
+  conditions:
+  - condition: sun
+    after: sunset
+    after_offset: 01:00:00
+  actions:
+  - type: turn_on
+    device_id: 31f1eee9e1cbffe473ae58a32c73cf36
+    entity_id: b5f20b1d6017175a5226ac00f37f5a68
+    domain: switch
+  mode: single
+- id: '1762887612543'
+  alias: Spegni balcone cucina
+  description: ''
+  triggers:
+  - type: not_opened
+    device_id: 1c045ecde669bf34157d0c194a539e51
+    entity_id: d1ae0331ccee0d32d5545346d63578bf
+    domain: binary_sensor
+    trigger: device
+  conditions: []
+  actions:
+  - type: turn_off
+    device_id: 31f1eee9e1cbffe473ae58a32c73cf36
+    entity_id: b5f20b1d6017175a5226ac00f37f5a68
+    domain: switch
+  mode: single
+- id: '1774965961675'
+  alias: Aggiorna cambio lenzuola
+  description: ''
+  triggers:
+  - domain: mqtt
+    device_id: 067270590aa91fb3d026ba05266d4b07
+    type: action
+    subtype: single
+    metadata: {}
+    trigger: device
+  conditions: []
+  actions:
+  - action: input_datetime.set_datetime
+    metadata: {}
+    target:
+      entity_id: input_datetime.data_ultimo_cambio_lenzuola
+    data:
+      date: '{{ now().date() }}'
+  mode: single
+- id: '1775065315311'
+  alias: TestRomeo
+  description: ''
+  triggers:
+  - domain: mqtt
+    device_id: ca890ae9f812f1c7a4e345514de9abcd
+    type: action
+    subtype: single
+    trigger: device
+  conditions: []
+  actions:
+  - type: toggle
+    device_id: d78dc1eae5892a92909298660310eae9
+    entity_id: b7cc3c3bed49002704a892d4c357fdac
+    domain: light
+  mode: single
+- id: '1776883893947'
+  alias: ToggleBarraAudioAutomation
+  description: ''
+  triggers:
+  - trigger: state
+    entity_id:
+    - input_boolean.togglebarraaudio
+    from:
+    - 'off'
+    to:
+    - 'on'
+  - trigger: state
+    entity_id:
+    - input_boolean.togglebarraaudio
+    from:
+    - 'on'
+    to:
+    - 'off'
+  conditions: []
+  actions:
+  - action: script.togglebarraaudio_2
+    metadata: {}
+    data: {}
+  mode: single
+- id: '1782401035698'
+  alias: Spegni tavolo cucina con la TV
+  description: ''
+  triggers:
+  - type: turned_on
+    device_id: c22abff7a102f8f282371752ceaaae16
+    entity_id: 13e1b59d5193ed630fe46798058d3b49
+    domain: remote
+    trigger: device
+  conditions:
+  - condition: sun
+    after: sunset
+    after_offset:
+      hours: 0
+      minutes: 10
+      seconds: 0
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      entity_id: switch.interruttore_tavolo_cucina
+    data: {}
+  mode: single
+- id: '1782720828127'
+  alias: Irrigatore cucina dimenticato acceso
+  description: Spegne automaticamente l'irrigatore del balcone dopo 15 minuti di accensione
+    e invia una notifica sul telefono e su Home Assistant.
+  triggers:
+  - entity_id:
+    - switch.irrigatore_balcone_cucina
+    to:
+    - 'on'
+    for:
+      hours: 0
+      minutes: 15
+      seconds: 0
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    data: {}
+    target:
+      entity_id: switch.irrigatore_balcone_cucina
+  - data:
+      message: Non hai spento irrigatore dopo 15 minuti cucina!
+    action: persistent_notification.create
+  - action: notify.mobile_app_oneplusnord2
+    metadata: {}
+    data:
+      message: NON HAI SPENTO L'ACQUA BALCONE CUCINA
+  mode: single
+- id: '1783606778207'
+  alias: Irrigazione cucina write last on
+  description: Aggiorna input_datetime.irrigatore_cucina_last_on quando l'irrigatore
+    balcone cucina si accende
+  triggers:
+  - trigger: state
+    entity_id: switch.irrigatore_balcone_cucina
+    from: 'off'
+    to: 'on'
+  conditions: []
+  actions:
+  - action: input_datetime.set_datetime
+    data:
+      entity_id: input_datetime.irrigatore_cucina_last_on
+      datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+  mode: single
+- id: '1783606782712'
+  alias: Irrigazione cucina write last off
+  description: Aggiorna input_datetime.irrigatore_cucina_last_off quando l'irrigatore
+    balcone cucina si spegne
+  triggers:
+  - trigger: state
+    entity_id: switch.irrigatore_balcone_cucina
+    from: 'on'
+    to: 'off'
+  conditions: []
+  actions:
+  - action: input_datetime.set_datetime
+    data:
+      entity_id: input_datetime.irrigatore_cucina_last_off
+      datetime: '{{ now().strftime(''%Y-%m-%d %H:%M:%S'') }}'
+  mode: single
+- id: '1783679639782'
+  alias: AntiAllagamento Irrigazione Soggiorno
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.irrigatore_flow
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+    above: 0.0001
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      device_id: 1f3b44b153cf61e8dca49126c8c37b39
+    data: {}
+  - action: notify.persistent_notification
+    metadata: {}
+    data:
+      message: Flow Irrigatore soggiorno > 0
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      entity_id: switch.schedule_67a7ad
+    data: {}
+  mode: single
+- id: '1783679868715'
+  alias: AntiAllagamento Irrigazione Cucina
+  description: ''
+  triggers:
+  - trigger: numeric_state
+    entity_id:
+    - sensor.irrigatore_balcone_cucina_flow
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 2
+    above: 0.0001
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      device_id: 8c8dbf027e53d1939657dccb745d4c3f
+    data: {}
+  - action: notify.persistent_notification
+    metadata: {}
+    data:
+      message: Flow Irrigatore cucina > 0
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      entity_id: switch.schedule_c2cbd5
+    data: {}
+  mode: single
+- id: '1785166706095'
+  alias: t3bench alerts to phone
+  description: Receives Grafana alert webhooks from the t3bench Tier3 benchmark (Grafana
+    runs on this same host) and forwards them as a phone notification. Payload fields
+    come from Grafana's default webhook body.
+  triggers:
+  - trigger: webhook
+    webhook_id: t3bench-alerts-9f2c71a4
+    allowed_methods:
+    - POST
+    local_only: true
+    note: Called by the Grafana contact point 't3bench-ha'. local_only keeps it reachable
+      from the LAN/docker only.
+  actions:
+  - action: notify.mobile_app_oneplusnord2
+    data:
+      title: '{{ trigger.json.title | default(''t3bench alert'', true) }}'
+      message: '{{ trigger.json.message | default(''(no message)'', true) | truncate(500)
+        }}'
+      data:
+        url: http://192.168.1.140:3000/alerting/list
+        tag: t3bench-alert
+    note: Templates only build the notification text; the url opens Grafana's alert
+      list.
+  mode: queued
+  max: 10
+- id: '1785323987981'
+  alias: SolarEdge data stale
+  description: Fires when the SolarEdge integration stops reporting. sensor.solaredge_data_age
+    counts minutes since sensor.solaredge_power_consumption last wrote anything; consumption
+    shares the power-flow coordinator with solar power, so the two freeze together.
+    Normal cadence is a poll every 15 minutes, so 45 means three missed polls. During
+    a freeze the entities keep showing their last value instead of going unavailable,
+    which silently corrupts energy statistics in both directions.
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.solaredge_data_age
+    above: 45
+    id: stale
+  - trigger: numeric_state
+    entity_id: sensor.solaredge_data_age
+    below: 45
+    id: recovered
+  actions:
+  - choose:
+    - alias: Raise the alarm
+      conditions:
+      - condition: trigger
+        id: stale
+      sequence:
+      - action: persistent_notification.create
+        data:
+          notification_id: solaredge_stale
+          title: SolarEdge data stale
+          message: No update from the SolarEdge integration for {{ states('sensor.solaredge_data_age')
+            }} minutes. Solar power is frozen at {{ states('sensor.solaredge_solar_power')
+            }} kW and consumption at {{ states('sensor.solaredge_power_consumption')
+            }} kW; both are stale, not real. Energy statistics recorded during this
+            window will be wrong.
+      - action: notify.mobile_app_oneplusnord2
+        data:
+          title: SolarEdge data stale
+          message: No update for {{ states('sensor.solaredge_data_age') }} minutes.
+            Readings are frozen.
+    - alias: Clear the alarm on recovery
+      conditions:
+      - condition: trigger
+        id: recovered
+      sequence:
+      - action: persistent_notification.dismiss
+        data:
+          notification_id: solaredge_stale
   mode: single

@@ -1,4 +1,3 @@
-version: '3.7'
 
 services:
   portainer-ce:
@@ -11,6 +10,7 @@ services:
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock
         - ./data/portainer-ce:/data
+        - /etc/localtime:/etc/localtime:ro
 
   home-assistant:
     container_name: home-assistant
@@ -22,6 +22,9 @@ services:
     network_mode: host
     restart: unless-stopped
     privileged: true
+    depends_on:
+      - mosquitto
+      - pihole
 
   mosquitto:
     container_name: mosquitto
@@ -48,43 +51,57 @@ services:
       - "TZ=Europe/Rome"
     network_mode: host
     restart: unless-stopped
+    ports:
+      - 8080:8080
+
+  cloudflared:
+    image: cloudflare/cloudflared
+    container_name: cloudflared
+    restart: unless-stopped
+    command: proxy-dns
+    environment:
+      - TZ=Europe/Rome
+      - "TUNNEL_DNS_PORT=5053"
+      - "TUNNEL_DNS_ADDRESS=0.0.0.0"
+    ports:
+      - "5053:5053/udp"
+    networks:
+      - dns-net
+
 
   pihole:
     container_name: pihole
     image: pihole/pihole:latest
     # For DHCP it is recommended to remove these ports and instead add: network_mode: "host"
+    # network_mode: "host"
     ports:
       - "53:53/tcp"
       - "53:53/udp"
-#      - "67:67/udp" # Only required if you are using Pi-hole as your DHCP server
       - "5300:80/tcp" # WEB UI
+      # Uncomment the line below if you are using Pi-hole as your DHCP server
+      #- "67:67/udp"
+      # Uncomment the line below if you are using Pi-hole as your NTP server
+      #- "123:123/udp"
     environment:
       TZ: 'Europe/Rome'
       # WEBPASSWORD: 'set a secure password here or it will be random'
+      # If using Docker's default `bridge` network setting the dns listening mode should be set to 'all'
+      FTLCONF_dns_listeningMode: 'all'
     # Volumes store your data between container upgrades
     volumes:
       - './config/etc-pihole:/etc/pihole'
       - './config/etc-dnsmasq.d:/etc/dnsmasq.d'
     #   https://github.com/pi-hole/docker-pi-hole#note-on-capabilities
-#    cap_add:
+    cap_add:
 #      - NET_ADMIN # Required if you are using Pi-hole as your DHCP server, else not needed
+#      - SYS_TIME   # Required if you are using Pi-hole as your NTP client to be able to set the host's system time
+       - SYS_NICE  # Optional, if Pi-hole should get some more processing time
     restart: unless-stopped
+    depends_on:
+      - cloudflared
+    networks:
+      - dns-net
 
-  plex:
-    container_name: plex
-    image: ghcr.io/linuxserver/plex:arm64v8-latest 
-    restart: unless-stopped
-    environment:
-      - TZ=Europe/Rome
-      - PLEX_CLAIM=!secrets.yaml plex_claim
-      - VERSION=docker
-      - PUID=1000
-      - PGID=1000
-    network_mode: host
-    volumes:
-      - ./config/plex:/config
-      - ./config/plex/transcode:/transcode
-      - $HOME/media/:/media
 
   grafana:
     container_name: grafana
@@ -105,14 +122,20 @@ services:
       - ./data/influxdb/data:/var/lib/influxdb2
     ports:
       - "8086:8086"
+    logging:
+      driver: "json-file"
+      options:
+        max-file: "5"
+        max-size: "100m"
 
   duckdns:
       container_name: duckdns
-      image: ghcr.io/linuxserver/duckdns
+      image: lscr.io/linuxserver/duckdns
       environment:
       - TZ=Europe/Rome
       - SUBDOMAINS=giurrero
-      - TOKEN=!secrets.yaml duckdns
+      - UPDATE_IP=ipv4
+      - TOKEN=${DUCKDNS_TOKEN}
       restart: always
 
   caddy:
@@ -126,5 +149,277 @@ services:
     restart: always
     ports:
     - "80:80"
-    - "443:443"
+    - "443:443/tcp"
+    - "443:443/udp"
     - "7000:7000"
+    - "32420:32420"
+    - "2019:2019"
+
+  otrecorder:
+      container_name: otrecorder
+      image: owntracks/recorder
+      ports:
+        - 8083:8083
+      environment:
+      - OTR_HOST=192.168.1.140 
+      - OTR_PORT=1888
+      - OTR_USER=user
+      - OTR_PASS=${OTR_PASS}
+      volumes:
+        - ./config/owntrack:/config
+        - ./data/owntrack:/store
+      restart: unless-stopped
+
+
+  owntracks-frontend:
+    image: owntracks/frontend
+    ports:
+      - 8082:80
+    volumes:
+      - ./config/owntrack_frontend/config.js:/usr/share/nginx/html/config/config.js
+    environment:
+      - SERVER_HOST=192.168.1.140
+      - SERVER_PORT=8083
+    restart: unless-stopped
+
+  duplicati:
+      image: lscr.io/linuxserver/duplicati:arm64v8-latest 
+      container_name: duplicati
+      restart: unless-stopped
+
+      environment:
+        - PUID=1000
+        - PGID=1000
+        #- CLI_ARGS= #optional
+      volumes:
+        - ./config/duplicati/:/config
+        - ./config:/config_to_backup
+        - .:/root_to_backup
+        - ./data/duplicati/source:/source
+        - ./data:/data_to_backup
+        - /etc/localtime:/etc/localtime:ro
+      ports:
+        - 8200:8200
+
+  music-assistant-server:
+      image: ghcr.io/music-assistant/server
+      container_name: music-assistant-server
+      restart: unless-stopped
+      network_mode: host
+      volumes:
+        - $HOME/media/:/media
+        - ./config/music-assistant/data:/data
+      # privileged caps (and security-opt) needed to mount smb folders within the container
+      cap_add:
+        - SYS_ADMIN
+        - DAC_READ_SEARCH
+      security_opt:
+        - apparmor:unconfined
+      ports:
+        - "1704"
+        - "1705"
+        - "4953-5153"
+
+
+  actual_server:
+    image: docker.io/actualbudget/actual-server:latest
+    ports:
+      # This line makes Actual available at port 5006 of the device you run the server on,
+      # i.e. http://localhost:5006. You can change the first number to change the port, if you want.
+      - '5006:5006'
+    environment:
+      # Uncomment any of the lines below to set configuration options.
+      # - ACTUAL_HTTPS_KEY=/data/selfhost.key
+      # - ACTUAL_HTTPS_CERT=/data/selfhost.crt
+      - ACTUAL_PORT=5006
+      - ACTUAL_CONFIG_PATH=/etc/actual/config.json
+      # - ACTUAL_UPLOAD_FILE_SYNC_SIZE_LIMIT_MB=20
+      # - ACTUAL_UPLOAD_SYNC_ENCRYPTED_FILE_SYNC_SIZE_LIMIT_MB=50
+      # - ACTUAL_UPLOAD_FILE_SIZE_LIMIT_MB=20
+      # See all options and more details at https://actualbudget.github.io/docs/Installing/Configuration
+      # !! If you are not using any of these options, remove the 'environment:' tag entirely.
+    volumes:
+      # Change './actual-data' below to the path to the folder you want Actual to store its data in on your server.
+      # '/data' is the path Actual will look for its files in by default, so leave that as-is.
+      - ./data/actual:/data
+      - ./config/actual:/etc/actual
+    healthcheck:
+      # Enable health check for the instance
+      test: ['CMD-SHELL', 'node src/scripts/health-check.js']
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    restart: unless-stopped
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:2
+    volumes:
+      - ./data/uptime-kuma:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 3001:3001
+    restart: unless-stopped
+
+  wg-easy:
+    #environment:
+    #  Optional:
+    #  - PORT=51821
+    #  - HOST=0.0.0.0
+    #  - INSECURE=false
+
+    image: ghcr.io/wg-easy/wg-easy:15
+    container_name: wg-easy
+    environment:
+      - WG_HOST=wg-easy.giurrero.duckdns.org
+    networks:
+      wg:
+        ipv4_address: 10.42.42.42
+        ipv6_address: fdcc:ad94:bacf:61a3::2a
+    volumes:
+      - ./config/wireguard:/etc/wireguard
+      - /lib/modules:/lib/modules:ro
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+      # - NET_RAW # ⚠️ Uncomment if using Podman
+    sysctls:
+      - net.ipv4.ip_forward=1
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv6.conf.all.disable_ipv6=0
+      - net.ipv6.conf.all.forwarding=1
+      - net.ipv6.conf.default.forwarding=1
+
+  speech-to-phrase:
+    image: rhasspy/wyoming-speech-to-phrase
+    container_name: speech-to-phrase
+    ports:
+      - "10300:10300"
+    volumes:
+      - ./data/speech-to-phrase/models:/models
+      - ./data/speech-to-phrase/train:/train
+    command:
+      --hass-websocket-uri 'ws://192.168.1.140:8123/api/websocket'
+      --hass-token '${HASS_TOKEN}'
+      --retrain-on-start
+    restart: unless-stopped
+
+  whisper:
+    image: rhasspy/wyoming-whisper
+    ports:
+      - "10301:10300"
+    volumes:
+      - ./data/whisper:/data
+    command:
+      --model tiny-int8
+      --language it
+    restart: unless-stopped
+
+  diun:
+    image: crazymax/diun:latest
+    container_name: diun
+    command: serve
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/diun:/data
+    environment:
+      - TZ=Europe/Rome
+      - LOG_LEVEL=info
+      - DIUN_WATCH_WORKERS=3
+      - DIUN_PROVIDERS_DOCKER=true
+      - "DIUN_WATCH_SCHEDULE=0 */6 * * *"
+      - DIUN_WATCH_JITTER=30s
+      - DIUN_PROVIDERS_DOCKER_WATCHBYDEFAULT=true
+      - DIUN_NOTIF_DISCORD_WEBHOOKURL=${DISCORD_WEBHOOK_URL}
+    restart: unless-stopped
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    restart: unless-stopped
+    volumes:
+      - ./config/homepage:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - HOMEPAGE_ALLOWED_HOSTS=192.168.1.140:3002,giurrero.duckdns.org
+    ports:
+      - "3002:3000"
+
+#  calibre-web:
+#    image: lscr.io/linuxserver/calibre-web:latest
+#    container_name: calibre-web
+#    restart: unless-stopped
+#    environment:
+#      - PUID=1000
+#      - PGID=1000
+#      - TZ=Europe/Rome
+#    volumes:
+#      - ./config/calibre:/config
+#      - $HOME/media/books:/books
+#    ports:
+#      - "8084:8083"
+
+
+  calibre-web-automated:
+    image: crocodilestick/calibre-web-automated:latest
+    container_name: calibre-web-automated
+    environment:
+      # Only change these if you know what you're doing
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Rome
+      # Hardcover API Key required for Hardcover as a Metadata Provider, get one here: https://docs.hardcover.app/api/getting-started/
+      - HARDCOVER_TOKEN=${HARDCOVER_TOKEN}
+      # If your library is on a network share (e.g., NFS/SMB), disable WAL to reduce locking issues
+      # Accepts: true/false (default: false)
+      - NETWORK_SHARE_MODE=false
+      # Override the default port (8083) for the web server.
+      # Accepts any valid port number.
+      - CWA_PORT_OVERRIDE=8083
+    volumes:
+      # CW users migrating should stop their existing CW instance, make a copy of the config folder, and bind that here to carry over all of their user settings ect.
+      - ./config/calibre-web-automated:/config
+      # This is an ingest dir, NOT a library one. Anything added here will be automatically added to your library according to the settings you have configured in CWA Settings page. All files placed here are REMOVED AFTER PROCESSING
+      - /media/books:/cwa-book-ingest
+      # If you don't have an existing library, CWA will automatically create one at the bind provided here
+      - ./data/calibre-web-automated:/calibre-library
+      # If you use calibre plugins, you can bind your plugins folder here to have CWA attempt to add them to its workflow (WIP)
+      # If you are starting with a fresh install, you also need to copy customize.py.json to the Calibre config volume above, in /path/to/config/folder/.config/calibre/customize.py.json, see the note below for more info
+      - ./config/calibre-web-automated/plugins:/config/.config/calibre/plugins
+    ports:
+      # Change the first number to change the port you want to access the Web UI, not the second
+      - 8085:8083
+    # If you set CWA_PORT_OVERRIDE to a port below 1024, you may need to uncomment the following line:
+    # cap_add:
+    #   - NET_BIND_SERVICE
+    restart: unless-stopped
+
+  authelia:
+    image: authelia/authelia:latest
+    container_name: authelia
+    restart: unless-stopped
+    volumes:
+      - ./config/authelia:/config
+    ports:
+      - "9092:9091"
+    environment:
+      - TZ=Europe/Rome
+
+networks:
+  dns-net:
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+  wg:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.42.42.0/24
+        - subnet: fdcc:ad94:bacf:61a3::/64

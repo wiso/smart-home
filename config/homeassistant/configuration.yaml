@@ -5,50 +5,27 @@ default_config:
 frontend:
   themes: !include_dir_merge_named themes
 
-http:
-  use_x_forwarded_for: true
-  trusted_proxies:
-    - 172.0.0.0/8
-
 #lovelace:
 #  mode: yaml
+
 
 automation: !include automations.yaml
 script: !include scripts.yaml
 scene: !include scenes.yaml
-
 sensor: !include sensor.yaml
+template: !include template.yaml
+alert: !include alerts.yaml
 
-binary_sensor:
-  - platform: template
+plant:
+  pianta_balcone:
     sensors:
-      washing_machine_status:
-        friendly_name: "Stato operativo lavatrice"
-        value_template: "{{ states('sensor.sensor.0xa4c138b68d2ecff7_power')| int(default=0) > 5 }}"
-        device_class: power
-        delay_on:
-          seconds: 15
-        delay_off:
-          seconds: 15
-  - platform: ping
-    host: 8.8.8.8
-    count: 2
-    scan_interval: 60
-    name: internet_connection
+      moisture: sensor.plant_sensor_cda4_moisture
+      battery: sensor.plant_sensor_cda4_battery
+      temperature: sensor.plant_sensor_cda4_temperature
+      conductivity: sensor.plant_sensor_cda4_conductivity
+      brightness: sensor.plant_sensor_cda4_illuminance
 
-influxdb:
-  host: 192.168.1.141
-  port: 8086
-  token: !secret influxdb_token
-  organization: hass
-  bucket: hass
-  api_version: 2
-  ssl: false
-  max_retries: 3
-  include:
-    entities:
-      - sensor.view_plus_carbon_dioxide
-
+      
 mqtt_statestream:
   base_topic: homeassistant
   publish_attributes: true
@@ -57,5 +34,30 @@ mqtt_statestream:
     entity_globs:
       - sensor.view_plus*
 
+owntracks:
+  max_gps_accuracy: 200
+  waypoints: true
+  mqtt_topic: "owntracks/#"
+
+
 homeassistant:
   packages: !include_dir_named packages
+
+smartir:
+
+media_player:
+  - platform: smartir
+    name: Barra soggiorno
+    unique_id: living_room_audiobar
+    device_code: 1125
+    controller_data: zigbee2mqtt/RemoteControlSoggiorno/set/ir_code_to_send
+
+
+climate:
+  - platform: smartir
+    name: Condizionatore soggiorno
+    unique_id: condizionatore_soggiorno
+    device_code: 5001
+    controller_data: zigbee2mqtt/RemoteControlSoggiorno/set/ir_code_to_send
+    temperature_sensor: sensor.view_plus_temperature
+    humidity_sensor: sensor.view_plus_humidity

@@ -4,22 +4,103 @@
 #}
 
 (https_header) {
-  header {
-    Strict-Transport-Security "max-age=31536000; includeSubdomains"
-    X-XSS-Protection "1; mode=block"
-    X-Content-Type-Options "nosniff"
-    X-Frame-Options "SAMEORIGIN"
-    Referrer-Policy "same-origin"
-  }
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubdomains"
+		X-XSS-Protection "1; mode=block"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "same-origin"
+	}
 }
 
-
-https://giurrero.duckdns.org { 
-  respond "Hello world!"
-  file_server
+http://giurrero.duckdns.org:80 {
+	respond "Hello world!"
+	file_server
 }
 
-https://giurrero.duckdns.org:7000 { 
-  import https_header
-  reverse_proxy http://192.168.1.141:8123
+# Authelia - pagina di login
+https://auth.giurrero.duckdns.org {
+	import https_header
+	reverse_proxy 192.168.1.140:9092
+}
+
+# Homepage - protetta da Authelia
+https://giurrero.duckdns.org {
+	import https_header
+	forward_auth authelia:9091 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+	}
+	reverse_proxy http://192.168.1.140:3002
+}
+
+# home assistant
+
+https://ha.giurrero.duckdns.org {
+	import https_header
+	reverse_proxy http://192.168.1.140:8123
+}
+
+# uptime kuma
+https://uptime.giurrero.duckdns.org:443 {
+	import https_header
+	forward_auth 192.168.1.140:9092 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+	}
+	reverse_proxy http://192.168.1.140:3001
+}
+
+# calibre web
+https://calibre.giurrero.duckdns.org {
+	import https_header
+	forward_auth 192.168.1.140:9092 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+	}
+	reverse_proxy http://192.168.1.140:8085
+}
+
+https://192.168.1.140:32420 {
+	import https_header
+	reverse_proxy http://192.168.1.140:32400
+}
+
+https://vpn.giurrero.duckdns.org:443 {
+	import https_header
+	forward_auth 192.168.1.140:9092 {
+		uri /api/authz/forward-auth
+		copy_headers Remote-User Remote-Groups Remote-Name Remote-Email
+
+		header_up X-Forwarded-Method {method}
+		header_up X-Forwarded-Uri {uri}
+	}
+
+	reverse_proxy http://192.168.1.140:51821
+}
+
+# t3bench InfluxDB — write-only, TLS, token-auth, restricted to INFN-Milano + CERN.
+# Only /api/v2/write and /health are proxied, and only from the allowlisted IPs;
+# anything else -> 403. UI, token management and query stay off the internet.
+https://influxdb.giurrero.duckdns.org {
+	import https_header
+	@ok {
+		path /api/v2/write /health
+		remote_ip 192.135.14.0/24 2001:760:4224::/48 137.138.0.0/16 128.141.0.0/16 128.142.0.0/16 188.184.0.0/15 194.12.128.0/18 2001:1458::/32 2001:1459::/32
+	}
+	handle @ok {
+		reverse_proxy http://192.168.1.140:8086
+	}
+	handle {
+		respond "forbidden" 403
+	}
 }
