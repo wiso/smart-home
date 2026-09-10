@@ -1,0 +1,126 @@
+- Smart Home:
+    - Home Assistant:
+        href: http://192.168.1.140:8123
+        externalLink: https://ha.giurrero.duckdns.org
+        icon: home-assistant.png
+        description: Home automation
+        server: my-docker
+        container: home-assistant
+        siteMonitor: http://192.168.1.140:8123
+        ping: http://192.168.1.140:8123
+        widget:
+          type: homeassistant
+          url: http://192.168.1.140:8123
+          key: '{{HOMEPAGE_VAR_HASS_TOKEN}}'
+          custom:
+          - state: sensor.temperaturacasamedia
+            label: Temperatura
+
+    - Zigbee2MQTT:
+        href: http://192.168.1.140:8080
+        icon: zigbee2mqtt.png
+        description: Zigbee gateway
+        server: my-docker
+        container: zigbee2mqtt
+
+    - Mosquitto:
+        href: http://192.168.1.140:8080
+        icon: mqtt.png
+        description: MQTT broker
+        server: my-docker
+        container: mosquitto
+
+- Monitoring:
+    - Grafana:
+        href: http://192.168.1.140:3000
+        icon: grafana.png
+        description: Dashboards
+        widget:
+          type: grafana
+          url: http://192.168.1.140:3000
+          username: admin
+          password: '{{HOMEPAGE_VAR_GRAFANA_PASSWORD}}'
+
+    - InfluxDB:
+        href: http://192.168.1.140:8086
+        icon: influxdb.png
+        description: Time series database
+
+    - Uptime Kuma:
+        href: http://192.168.1.140:3001/dashboard
+        icon: uptime-kuma.png
+        description: Uptime monitor
+        widget:
+          type: uptimekuma
+          url: http://192.168.1.140:3001
+          slug: YOUR_STATUS_PAGE_SLUG
+
+- Media:
+    - Music Assistant:
+        href: http://192.168.1.140:8095
+        icon: music-assistant.png
+        description: Music server
+
+    - Snapcast:
+        href: http://192.168.1.140:1780
+        icon: mdi-cast-audio
+        description: Multi-room audio
+
+    - Calibre Web:
+        href: https://calibre.giurrero.duckdns.org/
+        container: calibre-web
+        widget:
+          type: calibreweb
+          url: http://192.168.1.140:8084
+          username: admin
+          password: '{{HOMEPAGE_VAR_CALIBRE_PASSWORD}}'
+
+- Infrastruttura:
+    - Portainer:
+        href: http://192.168.1.140:9000
+        icon: portainer.png
+        description: Docker management
+        widget:
+          type: portainer
+          url: http://192.168.1.140:9000
+          env: 1
+          key: '{{HOMEPAGE_VAR_PORTAINER_KEY}}'
+
+    - Pi-hole:
+        href: http://192.168.1.140:5300/admin/
+        icon: pi-hole.png
+        description: DNS ad blocking
+        server: my-docker
+        container: pihole
+        widget:
+          type: pihole
+          version: 6
+          url: http://192.168.1.140:5300
+          key: '{{HOMEPAGE_VAR_PIHOLE_KEY}}'
+
+    - WireGuard:
+        href: https://vpn.giurrero.duckdns.org/login
+        icon: wireguard.png
+        description: VPN
+        container: wg-easy
+
+    - Duplicati:
+        href: http://192.168.1.140:8200
+        container: duplicati
+
+- Tracking:
+    - OwnTracks Recorder:
+        href: http://192.168.1.140:8083
+        icon: owntracks.png
+        description: Location backend
+
+    - OwnTracks Frontend:
+        href: http://192.168.1.140:8082
+        icon: owntracks.png
+        description: Location frontend
+
+- Finance:
+    - Actual Budget:
+        href: http://192.168.1.140:5006
+        icon: actual.png
+        description: Personal finance

@@ -1,0 +1,42 @@
+---
+# For configuration options and examples, please see:
+# https://gethomepage.dev/configs/settings/
+
+providers:
+  openweathermap: '{{HOMEPAGE_VAR_OPENWEATHERMAP_KEY}}'
+  weatherapi: '{{HOMEPAGE_VAR_WEATHERAPI_KEY}}'
+
+title: Home Lab
+description: My personal homelab dashboard
+theme: dark
+color: slate
+headerStyle: clean
+language: it
+
+layout:
+  Smart Home:
+    style: row
+    columns: 3
+  Monitoring:
+    style: row
+    columns: 3
+  Media:
+    style: row
+    columns: 2
+  Infrastruttura:
+    style: row
+    columns: 3
+  Tracking:
+    style: row
+    columns: 2
+  Finance:
+    style: row
+    columns: 1
+
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: true
+
+widgets:
+  - docker:
+      url: /var/run/docker.sock
