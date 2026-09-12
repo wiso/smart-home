@@ -1,0 +1,29 @@
+listen_addresses = ['0.0.0.0:5335']
+
+# Independent, non-filtering providers, verified against
+# https://github.com/DNSCrypt/dnscrypt-resolvers/blob/master/v3/public-resolvers.md
+# All filtering stays exclusively in Pi-hole: no overlap intended.
+server_names = ['cloudflare', 'quad9-dnscrypt-ip4-nofilter-pri']
+disabled_server_names = []
+
+ipv4_servers = true
+ipv6_servers = false   # dns-net has no IPv6
+
+require_dnssec = false  # inert when server_names is explicit
+require_nolog = true    # inert, same reason -- both providers are no-log anyway
+
+netprobe_address = '9.9.9.9:53'
+
+# Filtering intentionally disabled here: Pi-hole already handles it.
+# blocked_names_file / allowed_names_file / cloaking_rules: left unset.
+
+[sources.public-resolvers]
+urls = [
+  'https://raw.githubusercontent.com/DNSCrypt/dnscrypt-resolvers/master/v3/public-resolvers.md',
+  'https://download.dnscrypt.info/resolvers-list/v3/public-resolvers.md',
+  'https://cdn.jsdelivr.net/gh/DNSCrypt/dnscrypt-resolvers@master/v3/public-resolvers.md'
+]
+cache_file = '/data/public-resolvers.md'
+minisign_key = 'RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3'
+refresh_delay = 73
+prefix = ''
