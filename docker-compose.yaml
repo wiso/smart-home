@@ -286,6 +286,14 @@ services:
 
     image: ghcr.io/wg-easy/wg-easy:15
     container_name: wg-easy
+    # Raspberry Pi OS kernels >= 6.18 dropped legacy iptables module support
+    # (CONFIG_NETFILTER_XTABLES_LEGACY unset), only nftables works now.
+    # Switch the container's iptables alternatives to the nft-backed variant
+    # before starting, otherwise wg-quick fails to bring up wg0.
+    command: >
+      sh -c "ln -sf /usr/sbin/iptables-nft /etc/alternatives/iptables &&
+             ln -sf /usr/sbin/ip6tables-nft /etc/alternatives/ip6tables &&
+             exec dumb-init node server/index.mjs"
     environment:
       - WG_HOST=wg-easy.giurrero.duckdns.org
     networks:
