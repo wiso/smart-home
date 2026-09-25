@@ -1,16 +1,15 @@
 
 services:
-  portainer-ce:
-      container_name: portainer
-      image: portainer/portainer-ce
-      restart: unless-stopped
-      ports:
-        - 8000:8000 # Agent
-        - 9000:9000 # Web UI
-      volumes:
-        - /var/run/docker.sock:/var/run/docker.sock
-        - ./data/portainer-ce:/data
-        - /etc/localtime:/etc/localtime:ro
+  dockhand:
+    image: fnsys/dockhand:latest
+    container_name: dockhand
+    restart: unless-stopped
+    ports:
+      - 3010:3000
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - dockhand_data:/app/data
+
 
   home-assistant:
     container_name: home-assistant
@@ -375,6 +374,7 @@ services:
       - HOMEPAGE_VAR_CALIBRE_PASSWORD=${CALIBRE_WEB_PASSWORD}
       - HOMEPAGE_VAR_GRAFANA_PASSWORD=${GRAFANA_WIDGET_PASSWORD}
       - HOMEPAGE_VAR_PORTAINER_KEY=${PORTAINER_API_KEY}
+      - HOMEPAGE_VAR_DOCKERHAND_TOKEN=${DOCKERHAND_TOKEN}
       - HOMEPAGE_VAR_OPENWEATHERMAP_KEY=${OPENWEATHERMAP_API_KEY}
       - HOMEPAGE_VAR_WEATHERAPI_KEY=${WEATHERAPI_KEY}
     ports:
@@ -454,3 +454,6 @@ networks:
       config:
         - subnet: 10.42.42.0/24
         - subnet: fdcc:ad94:bacf:61a3::/64
+
+volumes:
+  dockhand_data:

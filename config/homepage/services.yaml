@@ -76,16 +76,6 @@
           password: '{{HOMEPAGE_VAR_CALIBRE_PASSWORD}}'
 
 - Infrastruttura:
-    - Portainer:
-        href: http://192.168.1.140:9000
-        icon: portainer.png
-        description: Docker management
-        widget:
-          type: portainer
-          url: http://192.168.1.140:9000
-          env: 1
-          key: '{{HOMEPAGE_VAR_PORTAINER_KEY}}'
-
     - Pi-hole:
         href: http://192.168.1.140:5300/admin/
         icon: pi-hole.png
@@ -107,6 +97,18 @@
     - Duplicati:
         href: http://192.168.1.140:8200
         container: duplicati
+
+    - DockHand:
+        icon: docker.png
+        description: Docker management
+        server: my-docker
+        container: dockhand
+        widget:
+          type: dockhand
+          url: http://192.168.1.140:3010
+          environment: SmartHome
+          key: '{{HOMEPAGE_VAR_DOCKERHAND_TOKEN}}'
+
 
 - Tracking:
     - OwnTracks Recorder:
