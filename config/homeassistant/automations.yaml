@@ -247,37 +247,41 @@
     target:
       entity_id: input_datetime.ultimoppromeo
   mode: single
-- id: '1731417290067'
-  alias: AccendiSgabuzzino
-  description: ''
-  triggers:
-  - type: opened
-    device_id: 8c572a29e0d36da9ab675fcbee25db7a
-    entity_id: 73943b00e7e801217c7410d42bac8aaf
-    domain: binary_sensor
-    trigger: device
-  conditions: []
-  actions:
-  - type: turn_on
-    device_id: ef76b69779fa817d99bcb2212594605f
-    entity_id: 5ff3084a7a141c7b0889df4d7179a745
-    domain: switch
-  mode: single
 - id: '1731417353195'
   alias: Spegni sgabuzzino
   description: ''
   triggers:
-  - type: not_opened
-    device_id: 8c572a29e0d36da9ab675fcbee25db7a
-    entity_id: 73943b00e7e801217c7410d42bac8aaf
-    domain: binary_sensor
-    trigger: device
+  - trigger: door.closed
+    target:
+      entity_id: binary_sensor.sensoreportasgabuzzino_contact
+    options:
+      behavior: each
+      for: 00:00:00
+    id: generated-o60P
+  - trigger: door.opened
+    target:
+      entity_id: binary_sensor.sensoreportasgabuzzino_contact
+    options:
+      behavior: each
+      for: 00:00:00
   conditions: []
   actions:
-  - type: turn_off
-    device_id: ef76b69779fa817d99bcb2212594605f
-    entity_id: 5ff3084a7a141c7b0889df4d7179a745
-    domain: switch
+  - if:
+    - condition: trigger
+      id:
+      - generated-o60P
+    then:
+    - action: light.turn_off
+      metadata: {}
+      target:
+        entity_id: light.sgabuzzino
+      data: {}
+    else:
+    - action: light.turn_on
+      metadata: {}
+      target:
+        entity_id: light.sgabuzzino
+      data: {}
   mode: single
 - id: '1731439122592'
   alias: RingRuggero
@@ -367,7 +371,7 @@
   triggers:
   - trigger: state
     entity_id:
-    - media_player.samsung_7_series_55
+    - media_player.samsung_7_series_55_wake_on_lan
     from: 'off'
     to: 'on'
   conditions:
@@ -392,7 +396,7 @@
   triggers:
   - trigger: state
     entity_id:
-    - media_player.samsung_7_series_55
+    - media_player.samsung_7_series_55_wake_on_lan
     to: 'off'
   actions:
   - action: light.turn_off

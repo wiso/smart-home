@@ -99,6 +99,7 @@
         container: duplicati
 
     - DockHand:
+        href: http://192.168.1.140:3010
         icon: docker.png
         description: Docker management
         server: my-docker
