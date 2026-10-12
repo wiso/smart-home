@@ -3,3 +3,28 @@ passwords
 **/secrets.yaml
 **/secret.yaml
 config/homeassistant/custom_components
+
+# secrets / credentials
+.env
+.password
+*.old
+config/homeassistant/duplicati_pass
+config/homeassistant/html5_push_registrations.conf
+config/homeassistant/.storage/
+config/homeassistant/.ha_mcp/
+config/wireguard/
+
+# editor and manual backups
+*~
+*.bak
+*.bak.*
+
+# Home Assistant runtime data
+config/homeassistant/.cache/
+config/homeassistant/.HA_VERSION
+config/homeassistant/.ha_run.lock
+config/homeassistant/backups/
+config/homeassistant/home-assistant.log*
+config/homeassistant/home-assistant_v2.db*
+config/homeassistant/tts/
+config/homepage/logs/
