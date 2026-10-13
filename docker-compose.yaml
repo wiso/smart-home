@@ -167,7 +167,6 @@ services:
     - "443:443/tcp"
     - "443:443/udp"
     - "7000:7000"
-    - "32420:32420"
     - "2019:2019"
 
   otrecorder:
@@ -274,6 +273,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 3001:3001
+    # The Pi cannot reach its own public IP from eth0 (hairpin replies come back
+    # with our own source address and are dropped), so resolve public hostnames
+    # straight to Caddy on the LAN.
+    extra_hosts:
+      - "giurrero.duckdns.org:192.168.1.140"
+      - "auth.giurrero.duckdns.org:192.168.1.140"
+      - "ha.giurrero.duckdns.org:192.168.1.140"
+      - "uptime.giurrero.duckdns.org:192.168.1.140"
+      - "calibre.giurrero.duckdns.org:192.168.1.140"
+      - "vpn.giurrero.duckdns.org:192.168.1.140"
+      - "influxdb.giurrero.duckdns.org:192.168.1.140"
     restart: unless-stopped
 
   wg-easy:
@@ -337,9 +347,15 @@ services:
       - "10301:10300"
     volumes:
       - ./data/whisper:/data
+    # Parakeet v3 (via sherpa-onnx): ~3x faster and more accurate than
+    # whisper tiny-int8 on the Pi 5, but needs ~1.1 GB RAM
     command:
-      --model tiny-int8
-      --language it
+      - --stt-library
+      - sherpa
+      - --model
+      - sherpa-onnx-nemo-parakeet-tdt-0.6b-v3-int8
+      - --language
+      - it
     restart: unless-stopped
 
   diun:
